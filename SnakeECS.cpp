@@ -157,7 +157,7 @@ void createFruit(const FruitType type)
 
 		// generate position and see if it's taken or not by a segment
 		const auto pos = intDistribution(engine);
-		const auto position = Position{static_cast<char>(pos % fieldSize), static_cast<char>(pos / fieldSize)};
+		const auto position = Position{pos % fieldSize, pos / fieldSize};
 		auto takenPosition = false;
 		for (auto&& segmentPosition : segments)
 		{
@@ -245,16 +245,17 @@ void updateCollisions()
 			if (headPosition == fruitPosition)
 			{
 				score += fruitScore.amount;
+				snake.extensionsLeft += fruitScore.amount;
 
-				if (fruit.type == FruitType::Regular)
+				switch (fruit.type)
 				{
-					++snake.extensionsLeft;
+				case FruitType::Regular:
 					createFruit(FruitType::Regular);
-				}
-				else
-				{
-					snake.extensionsLeft += 3;
+					break;
+				case FruitType::Special:
 					createFruitSpawner();
+					break;
+				default: ;
 				}
 
 				registry.destroy(fruitEntity);

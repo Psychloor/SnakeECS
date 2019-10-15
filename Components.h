@@ -25,8 +25,8 @@ struct FruitSpawner
 
 struct Position
 {
-	char x;
-	char y;
+	int x;
+	int y;
 };
 
 struct Fruit
@@ -36,7 +36,7 @@ struct Fruit
 
 struct Score
 {
-	char amount;
+	int amount;
 };
 
 struct Segment
@@ -73,7 +73,7 @@ struct Snake
 {
 	std::vector<Segment> segments{};
 	Direction direction = Direction::None;
-	char extensionsLeft = 0;
+	int extensionsLeft = 0;
 };
 
 struct Time
