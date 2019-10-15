@@ -166,6 +166,16 @@
   <ItemGroup>
     <ClInclude Include="Components.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Font Include="OpenSansBold.ttf">
+      <DeploymentContent>false</DeploymentContent>
+    </Font>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="texture.png">
+      <DeploymentContent>false</DeploymentContent>
+    </Image>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
