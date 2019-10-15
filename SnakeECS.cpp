@@ -38,6 +38,63 @@ bool operator==(const Position& lhs, const Position& rhs)
 	return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
+
+void drawRectangle(std::vector<sf::Vertex>& vertices, const Position position, const sf::Color& color)
+{
+	// contracted rect
+	const sf::FloatRect rect(float(position.x) * tileSize, float(position.y) * tileSize, tileSize,
+		tileSize);
+	const sf::FloatRect uv(0, 0, textureSize, textureSize);
+
+	const auto tl = sf::Vertex(sf::Vector2f(rect.left, rect.top), color, sf::Vector2f(uv.left, uv.top));
+	const auto tr = sf::Vertex(sf::Vector2f(rect.left + rect.width, rect.top), color,
+		sf::Vector2f(uv.left + uv.width, uv.top));
+	const auto br = sf::Vertex(sf::Vector2f(rect.left + rect.width, rect.top + rect.width), color,
+		sf::Vector2f(uv.left + uv.width, uv.top + uv.height));
+	const auto bl = sf::Vertex(sf::Vector2f(rect.left, rect.top + rect.width), color,
+		sf::Vector2f(uv.left, uv.top + uv.height));
+
+	// North-east triangle
+	vertices.push_back(tl);
+	vertices.push_back(tr);
+	vertices.push_back(br);
+
+	// South west triangle
+	vertices.push_back(br);
+	vertices.push_back(bl);
+	vertices.push_back(tl);
+}
+
+void createSnakeVertices()
+{
+	auto view = registry.view<Snake, VertexList>();
+	static const auto color = sf::Color::Blue;
+	for (auto entity : view)
+	{
+		auto& segments = view.get<Snake>(entity).segments;
+		auto& vertices = view.get<VertexList>(entity);
+		vertices.vertices.clear();
+		for (auto&& segment : segments)
+		{
+			drawRectangle(vertices.vertices, segment.currentPosition(), color);
+		}
+	}
+}
+
+void createFruitVertices()
+{
+	auto view = registry.view<Fruit, Position, VertexList>();
+	static const auto color = sf::Color::Green;
+	static const auto specialColor = sf::Color::Red;
+	for (auto entity : view)
+	{
+		const auto& position = view.get<Position>(entity);
+		auto& vertices = view.get<VertexList>(entity);
+		vertices.vertices.clear();
+		drawRectangle(vertices.vertices, position, view.get<Fruit>(entity).type == FruitType::Regular ? color : specialColor);
+	}
+}
+
 void updateSnake(const sf::Time& dt)
 {
 	auto view = registry.view<Snake, Time>();
@@ -113,6 +170,7 @@ void updateSnake(const sf::Time& dt)
 				snake.segments.emplace_back(snake.segments.back().previousPosition());
 				--snake.extensionsLeft;
 			}
+			createSnakeVertices();
 		}
 	}
 }
@@ -171,12 +229,12 @@ void createFruit(const FruitType type)
 		if (takenPosition) continue;
 
 		// not taken so place it
-		auto [entity, fruit, fruitPosition, time, score] = registry.create<Fruit, Position, Time, Score>();
+		auto [entity, fruit, fruitPosition, time, score, vertices] = registry.create<Fruit, Position, Time, Score, VertexList>();
 		fruit.type = type;
 		fruitPosition = position;
 		time.time = sf::seconds(specialFruitTime());
 		score.amount = type == FruitType::Regular ? 1 : 3;
-
+		createFruitVertices();
 		return;
 	}
 }
@@ -266,12 +324,13 @@ void updateCollisions()
 
 void createSnake()
 {
-	auto [id, snake, time] = registry.create<Snake, Time>();
+	auto [id, snake, time, vertices] = registry.create<Snake, Time, VertexList>();
 	time.time = sf::Time::Zero;
 	const auto center = Position{halfFieldSize, halfFieldSize};
 
 	snake.segments.emplace_back(Segment(center));
 	snake.extensionsLeft = 2;
+	createSnakeVertices();
 }
 
 void startNewGame()
@@ -337,57 +396,20 @@ void handleEvent(sf::Event& event)
 	}
 }
 
-void drawRectangle(sf::VertexArray& vertices, const Position position, const sf::Color& color)
+void renderVertices(sf::VertexArray& vertices)
 {
-	// contracted rect
-	const sf::FloatRect rect(float(position.x) * tileSize, float(position.y) * tileSize, tileSize,
-	                         tileSize);
-	const sf::FloatRect uv(0, 0, textureSize, textureSize);
+	auto view = registry.view<VertexList>();
 
-	const auto tl = sf::Vertex(sf::Vector2f(rect.left, rect.top), color, sf::Vector2f(uv.left, uv.top));
-	const auto tr = sf::Vertex(sf::Vector2f(rect.left + rect.width, rect.top), color,
-	                           sf::Vector2f(uv.left + uv.width, uv.top));
-	const auto br = sf::Vertex(sf::Vector2f(rect.left + rect.width, rect.top + rect.width), color,
-	                           sf::Vector2f(uv.left + uv.width, uv.top + uv.height));
-	const auto bl = sf::Vertex(sf::Vector2f(rect.left, rect.top + rect.width), color,
-	                           sf::Vector2f(uv.left, uv.top + uv.height));
-
-	// North-east triangle
-	vertices.append(tl);
-	vertices.append(tr);
-	vertices.append(br);
-
-	// South west triangle
-	vertices.append(br);
-	vertices.append(bl);
-	vertices.append(tl);
-}
-
-void renderSnake(sf::VertexArray& vertices, entt::registry& registry)
-{
-	auto view = registry.view<Snake>();
-	static const auto color = sf::Color::Blue;
 	for (auto entity : view)
 	{
-		auto& segments = view.get(entity).segments;
-		for (auto&& segment : segments)
+		 auto& entityVertices = view.get(entity).vertices;
+		for (auto && vertex : entityVertices)
 		{
-			drawRectangle(vertices, segment.currentPosition(), color);
+			vertices.append(vertex);
 		}
 	}
 }
 
-void renderFruits(sf::VertexArray& vertices, entt::registry& registry)
-{
-	auto view = registry.view<Fruit, Position>();
-	static const auto color = sf::Color::Green;
-	static const auto specialColor = sf::Color::Red;
-	for (auto entity : view)
-	{
-		const auto& position = view.get<Position>(entity);
-		drawRectangle(vertices, position, view.get<Fruit>(entity).type == FruitType::Regular ? color : specialColor);
-	}
-}
 
 int main()
 {
@@ -503,8 +525,7 @@ int main()
 		vertexArray.clear();
 		window.clear();
 
-		renderSnake(vertexArray, registry);
-		renderFruits(vertexArray, registry);
+		renderVertices(vertexArray);
 		window.draw(vertexArray, renderState);
 
 		switch (gameState)

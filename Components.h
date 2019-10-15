@@ -29,6 +29,11 @@ struct Position
 	int y;
 };
 
+struct VertexList
+{
+	std::vector<sf::Vertex> vertices{};
+};
+
 struct Fruit
 {
 	FruitType type;
