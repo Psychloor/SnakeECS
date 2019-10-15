@@ -39,7 +39,7 @@ bool operator==(const Position& lhs, const Position& rhs)
 }
 
 
-void drawRectangle(std::vector<sf::Vertex>& vertices, const Position position, const sf::Color& color)
+void drawRectangle(sf::VertexArray& vertices, const Position position, const sf::Color& color)
 {
 	// contracted rect
 	const sf::FloatRect rect(float(position.x) * tileSize, float(position.y) * tileSize, tileSize,
@@ -55,14 +55,14 @@ void drawRectangle(std::vector<sf::Vertex>& vertices, const Position position, c
 		sf::Vector2f(uv.left, uv.top + uv.height));
 
 	// North-east triangle
-	vertices.push_back(tl);
-	vertices.push_back(tr);
-	vertices.push_back(br);
+	vertices.append(tl);
+	vertices.append(tr);
+	vertices.append(br);
 
 	// South west triangle
-	vertices.push_back(br);
-	vertices.push_back(bl);
-	vertices.push_back(tl);
+	vertices.append(br);
+	vertices.append(bl);
+	vertices.append(tl);
 }
 
 void createSnakeVertices()
@@ -234,6 +234,7 @@ void createFruit(const FruitType type)
 		fruitPosition = position;
 		time.time = sf::seconds(specialFruitTime());
 		score.amount = type == FruitType::Regular ? 1 : 3;
+		vertices.vertices.setPrimitiveType(sf::Triangles);
 		createFruitVertices();
 		return;
 	}
@@ -330,6 +331,8 @@ void createSnake()
 
 	snake.segments.emplace_back(Segment(center));
 	snake.extensionsLeft = 2;
+	vertices.vertices.setPrimitiveType(sf::Triangles);
+	vertices.vertices.resize(fieldSize * fieldSize * 6);
 	createSnakeVertices();
 }
 
@@ -396,17 +399,14 @@ void handleEvent(sf::Event& event)
 	}
 }
 
-void renderVertices(sf::VertexArray& vertices)
+void renderVertices(sf::RenderTarget& renderer, sf::RenderStates& states)
 {
 	auto view = registry.view<VertexList>();
 
 	for (auto entity : view)
 	{
 		 auto& entityVertices = view.get(entity).vertices;
-		for (auto && vertex : entityVertices)
-		{
-			vertices.append(vertex);
-		}
+		 renderer.draw(entityVertices, states);
 	}
 }
 
@@ -415,11 +415,10 @@ int main()
 {
 	sf::RenderWindow window;
 	window.create(sf::VideoMode(int(fieldSize * tileSize), int(fieldSize * tileSize)), "Psy's Snake");
-	window.setFramerateLimit(120);
+	window.setFramerateLimit(240);
 
 	sf::Clock clock;
 	sf::Time elapsed;
-	sf::VertexArray vertexArray(sf::Triangles);
 
 	sf::RenderStates renderState = sf::RenderStates::Default;
 	sf::Texture texture;
@@ -513,6 +512,12 @@ int main()
 
 		// update
 		elapsed = clock.restart();
+
+		if(!window.hasFocus())
+		{
+			gameState = GameState::Paused;
+		}
+		
 		if (gameState == GameState::Running)
 		{
 			updateSnake(elapsed);
@@ -522,11 +527,9 @@ int main()
 		}
 
 		// render
-		vertexArray.clear();
 		window.clear();
 
-		renderVertices(vertexArray);
-		window.draw(vertexArray, renderState);
+		renderVertices(window, renderState);
 
 		switch (gameState)
 		{

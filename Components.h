@@ -31,7 +31,7 @@ struct Position
 
 struct VertexList
 {
-	std::vector<sf::Vertex> vertices{};
+	sf::VertexArray vertices{};
 };
 
 struct Fruit
