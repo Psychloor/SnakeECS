@@ -1,7 +1,3 @@
-// This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
-
 #include <iostream>
 #include <random>
 
@@ -86,18 +82,19 @@ void updateSnake(const sf::Time& dt)
 			}
 
 			// check for self-collision
-			if (snake.segments.size() > 1) {
+			if (snake.segments.size() > 1)
+			{
 				const auto end = snake.segments.end();
 				for (auto it = ++snake.segments.begin(); it != end; ++it)
 				{
-					if(it->currentPosition() == headPosition)
+					if (it->currentPosition() == headPosition)
 					{
 						gameState = GameState::GameOver;
 						return;
 					}
 				}
 			}
-			
+
 			// Move the snake
 			const auto count = snake.segments.size();
 			for (size_t i = 0; i < count; ++i)
@@ -119,7 +116,6 @@ void updateSnake(const sf::Time& dt)
 		}
 	}
 }
-
 
 
 void createFruit(const FruitType type)
@@ -179,8 +175,8 @@ void createFruit(const FruitType type)
 		fruit.type = type;
 		fruitPosition = position;
 		time.time = sf::seconds(specialFruitTime());
-		score.amount = type == FruitType::Regular ? 1: 3;
-		
+		score.amount = type == FruitType::Regular ? 1 : 3;
+
 		return;
 	}
 }
@@ -190,7 +186,7 @@ void createFruitSpawner()
 	static std::random_device randomDevice{};
 	static std::default_random_engine engine(randomDevice());
 	static const std::uniform_real_distribution<float> distribution(8.0f, 26.0f);
-	
+
 	auto [entity, spawner] = registry.create<FruitSpawner>();
 	// random delay
 	spawner.remaining = sf::seconds(distribution(engine) * moveSpeed);
@@ -203,7 +199,7 @@ void updateFruitSpawners(const sf::Time& dt)
 	{
 		auto& spawner = view.get(entity);
 		spawner.remaining -= dt;
-		if(spawner.remaining <= sf::Time::Zero)
+		if (spawner.remaining <= sf::Time::Zero)
 		{
 			createFruit(FruitType::Special);
 			registry.destroy(entity);
@@ -240,7 +236,7 @@ void updateCollisions()
 	for (auto snakeEntity : snakeView)
 	{
 		auto& snake = snakeView.get(snakeEntity);
-		const auto headPosition = snake.segments.at(0).currentPosition();
+		const auto& headPosition = snake.segments.at(0).currentPosition();
 
 		auto fruitView = registry.view<Fruit, Position, Score>();
 		for (auto fruitEntity : fruitView)
@@ -249,7 +245,7 @@ void updateCollisions()
 			if (headPosition == fruitPosition)
 			{
 				score += fruitScore.amount;
-				
+
 				if (fruit.type == FruitType::Regular)
 				{
 					++snake.extensionsLeft;
@@ -296,12 +292,12 @@ void handleEvent(sf::Event& event)
 		for (auto entity : view)
 		{
 			auto& direction = view.get(entity).direction;
-			
+
 			switch (event.key.code)
 			{
 			case sf::Keyboard::W:
 			case sf::Keyboard::Up:
-				if(direction != Direction::South)
+				if (direction != Direction::South)
 					direction = Direction::North;
 				break;
 
@@ -347,10 +343,13 @@ void drawRectangle(sf::VertexArray& vertices, const Position position, const sf:
 	                         tileSize);
 	const sf::FloatRect uv(0, 0, textureSize, textureSize);
 
-	const auto tl = sf::Vertex(sf::Vector2f(rect.left, rect.top) , color, sf::Vector2f(uv.left, uv.top));
-	const auto tr = sf::Vertex(sf::Vector2f(rect.left + rect.width, rect.top), color, sf::Vector2f(uv.left + uv.width, uv.top));
-	const auto br = sf::Vertex(sf::Vector2f(rect.left + rect.width, rect.top + rect.width), color, sf::Vector2f(uv.left + uv.width, uv.top + uv.height));
-	const auto bl = sf::Vertex(sf::Vector2f(rect.left, rect.top + rect.width), color, sf::Vector2f(uv.left, uv.top + uv.height));
+	const auto tl = sf::Vertex(sf::Vector2f(rect.left, rect.top), color, sf::Vector2f(uv.left, uv.top));
+	const auto tr = sf::Vertex(sf::Vector2f(rect.left + rect.width, rect.top), color,
+	                           sf::Vector2f(uv.left + uv.width, uv.top));
+	const auto br = sf::Vertex(sf::Vector2f(rect.left + rect.width, rect.top + rect.width), color,
+	                           sf::Vector2f(uv.left + uv.width, uv.top + uv.height));
+	const auto bl = sf::Vertex(sf::Vector2f(rect.left, rect.top + rect.width), color,
+	                           sf::Vector2f(uv.left, uv.top + uv.height));
 
 	// North-east triangle
 	vertices.append(tl);
@@ -401,7 +400,7 @@ int main()
 
 	sf::RenderStates renderState = sf::RenderStates::Default;
 	sf::Texture texture;
-	if(texture.loadFromFile("texture.png"))
+	if (texture.loadFromFile("texture.png"))
 	{
 		renderState.blendMode = sf::BlendAlpha;
 		renderState.texture = &texture;
@@ -430,7 +429,7 @@ int main()
 
 	auto gameOverBounds = gameOverText.getLocalBounds();
 	gameOverText.setOrigin(gameOverBounds.width / 2, gameOverBounds.height / 2);
-	gameOverText.setPosition(fieldSize * tileSize / 2 , fieldSize * tileSize / 2);
+	gameOverText.setPosition(fieldSize * tileSize / 2, fieldSize * tileSize / 2);
 
 	sf::Text pausedText;
 	pausedText.setString("Paused");
@@ -482,7 +481,7 @@ int main()
 				}
 			}
 
-			if(event.type == sf::Event::Closed)
+			if (event.type == sf::Event::Closed)
 			{
 				registry.reset();
 				window.close();
@@ -509,7 +508,6 @@ int main()
 
 		switch (gameState)
 		{
-
 		case GameState::Paused:
 			window.draw(pausedText);
 			break;
@@ -519,7 +517,7 @@ int main()
 		case GameState::GameOver:
 			window.draw(gameOverText);
 			break;
-		default:;
+		default: ;
 		}
 
 		window.display();
