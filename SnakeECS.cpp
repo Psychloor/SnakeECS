@@ -7,15 +7,21 @@
 #include "Components.h"
 #include <fstream>
 
+
 constexpr auto tileSize = 32.0f;
 constexpr auto fieldSize = 20;
 constexpr auto halfFieldSize = fieldSize / 2;
 constexpr auto textureSize = 40.0f;
 
-float moveSpeed = 0.15f;
+constexpr float lerp(const float a, const float b, const float f) {
+	return a + f * (b - a);
+}
+
+int movementSpeed = 6;
+float moveSpeed() { return lerp(.2f, .1f, float(movementSpeed) / 10.0f); }
 
 // move 25 blocks before it moves
-static float specialFruitTime() { return moveSpeed * 25.0f; }
+static float specialFruitTime() { return moveSpeed() * 25.0f; }
 
 
 enum class GameState
@@ -100,8 +106,7 @@ void updateSnake(const sf::Time& dt)
 	auto view = registry.view<Snake, Time>();
 	for (auto entity : view)
 	{
-		auto& snake = view.get<Snake>(entity);
-		auto& timer = view.get<Time>(entity);
+		auto&& [snake, timer] = view.get<Snake, Time>(entity);
 
 		timer.time += dt;
 
@@ -109,7 +114,7 @@ void updateSnake(const sf::Time& dt)
 		if (snake.direction == Direction::None) { continue; }
 
 		// able to move?
-		if (timer.time.asSeconds() >= moveSpeed && !snake.segments.empty())
+		if (timer.time.asSeconds() >= moveSpeed() && !snake.segments.empty())
 		{
 			timer.time = sf::Time::Zero;
 
@@ -248,7 +253,7 @@ void createFruitSpawner()
 
 	auto [entity, spawner] = registry.create<FruitSpawner>();
 	// random delay
-	spawner.remaining = sf::seconds(distribution(engine) * moveSpeed);
+	spawner.remaining = sf::seconds(distribution(engine) * moveSpeed());
 }
 
 void updateFruitSpawners(const sf::Time& dt)
@@ -272,8 +277,7 @@ void updateFruits(const sf::Time& dt)
 
 	for (auto entity : view)
 	{
-		auto& fruit = view.get<Fruit>(entity);
-		auto& countdown = view.get<Time>(entity);
+		auto&& [fruit, countdown] = view.get<Fruit, Time>(entity);
 
 		if (fruit.type == FruitType::Special)
 		{
@@ -351,41 +355,43 @@ void handleEvent(sf::Event& event)
 {
 	if (event.type == sf::Event::KeyPressed)
 	{
-		auto view = registry.view<Snake>();
-		for (auto entity : view)
-		{
-			auto& direction = view.get(entity).direction;
-
-			switch (event.key.code)
+		if (gameState == GameState::Running) {
+			auto view = registry.view<Snake>();
+			for (auto entity : view)
 			{
-			case sf::Keyboard::W:
-			case sf::Keyboard::Up:
-				if (direction != Direction::South)
-					direction = Direction::North;
-				break;
+				auto& direction = view.get(entity).direction;
 
-			case sf::Keyboard::A:
-			case sf::Keyboard::Left:
-				if (direction != Direction::East)
-					direction = Direction::West;
-				break;
+				switch (event.key.code)
+				{
+				case sf::Keyboard::W:
+				case sf::Keyboard::Up:
+					if (direction != Direction::South)
+						direction = Direction::North;
+					break;
 
-			case sf::Keyboard::S:
-			case sf::Keyboard::Down:
-				if (direction != Direction::North)
-					direction = Direction::South;
-				break;
+				case sf::Keyboard::A:
+				case sf::Keyboard::Left:
+					if (direction != Direction::East)
+						direction = Direction::West;
+					break;
 
-			case sf::Keyboard::D:
-			case sf::Keyboard::Right:
-				if (direction != Direction::West)
-					direction = Direction::East;
-				break;
-			default: ;
+				case sf::Keyboard::S:
+				case sf::Keyboard::Down:
+					if (direction != Direction::North)
+						direction = Direction::South;
+					break;
+
+				case sf::Keyboard::D:
+				case sf::Keyboard::Right:
+					if (direction != Direction::West)
+						direction = Direction::East;
+					break;
+				default:;
+				}
 			}
 		}
 
-		if (event.key.code == sf::Keyboard::P)
+		if (event.key.code == sf::Keyboard::P || event.key.code == sf::Keyboard::Escape)
 		{
 			if (gameState == GameState::Running)
 			{
@@ -462,21 +468,21 @@ int main()
 	pausedText.setOutlineColor(sf::Color::Black);
 
 	auto pausedBounds = pausedText.getLocalBounds();
-	pausedText.setOrigin(pausedBounds.width / 2, pausedBounds.height / 2);
+	pausedText.setOrigin(pausedBounds.width / 2, pausedBounds.height);
 	pausedText.setPosition(fieldSize * tileSize / 2, fieldSize * tileSize / 2);
 
-	{
-		std::ifstream f;
-		f.open("moveinterval.txt");
-		if (!f.eof())
-		{
-			std::string value{};
-			std::getline(f, value);
-			moveSpeed = float(std::atof(value.c_str()));
-		}
-
-		f.close();
-	}
+	sf::Text movementSpeedText;
+	movementSpeedText.setString("Movement Speed: "+std::to_string(movementSpeed));
+	movementSpeedText.setFont(openSansFont);
+	pausedText.setCharacterSize(42); // answer to everything
+	movementSpeedText.setFillColor(sf::Color::White);
+	movementSpeedText.setOutlineThickness(1.0f);
+	movementSpeedText.setOutlineColor(sf::Color::Black);
+	
+	auto movementSpeedTextBounds = movementSpeedText.getLocalBounds();
+	movementSpeedText.setOrigin(movementSpeedTextBounds.width / 2, 0);
+	movementSpeedText.setPosition(fieldSize * tileSize / 2, fieldSize * tileSize / 2);
+	
 	startNewGame();
 
 	size_t previousScore = 120;
@@ -501,7 +507,45 @@ int main()
 				{
 					startNewGame();
 				}
+
+				if(gameState == GameState::Paused)
+				{
+					if(event.key.code == sf::Keyboard::Left)
+					{
+						if (movementSpeed > 1) {
+							const auto original = moveSpeed();
+							--movementSpeed;
+							movementSpeedText.setString("Movement Speed: " + std::to_string(movementSpeed));
+							const auto ratio = moveSpeed() / original;
+							auto fruitView = registry.view<Fruit, Time>();
+							
+							for (auto fruitEntity : fruitView)
+							{
+								auto&& [fruit, time] = fruitView.get<Fruit, Time>(fruitEntity);
+								time.time *= ratio;
+							}
+						}
+					}
+					if (event.key.code == sf::Keyboard::Right)
+					{
+						if (movementSpeed < 10) {
+							const auto original = moveSpeed();
+							++movementSpeed;
+							movementSpeedText.setString("Movement Speed: " + std::to_string(movementSpeed));
+							const auto ratio = moveSpeed() / original;
+							auto fruitView = registry.view<Fruit, Time>();
+
+							for (auto fruitEntity : fruitView)
+							{
+								auto&& [fruit, time] = fruitView.get<Fruit, Time>(fruitEntity);
+								time.time *= ratio;
+							}
+						}
+					}
+				}
 			}
+
+
 
 			if (event.type == sf::Event::Closed)
 			{
@@ -535,6 +579,7 @@ int main()
 		{
 		case GameState::Paused:
 			window.draw(pausedText);
+			window.draw(movementSpeedText);
 			break;
 		case GameState::Won:
 			window.draw(wonText);

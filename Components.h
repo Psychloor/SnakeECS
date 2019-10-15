@@ -29,6 +29,8 @@ struct Position
 	int y;
 };
 
+
+
 struct VertexList
 {
 	sf::VertexArray vertices{};
