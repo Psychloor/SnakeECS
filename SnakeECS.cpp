@@ -213,48 +213,55 @@ void updateFruitSpawners(const sf::Time& dt)
 
 void updateFruits(const sf::Time& dt)
 {
-	auto view = registry.view<Fruit, Position, Time, Score>();
+	auto view = registry.view<Fruit, Time, Score>();
 
 	for (auto entity : view)
 	{
 		auto& fruit = view.get<Fruit>(entity);
-		auto& position = view.get<Position>(entity);
 		auto& countdown = view.get<Time>(entity);
 
-		if (fruit.type != FruitType::Regular)
+		if (fruit.type == FruitType::Special)
 		{
 			countdown.time -= dt;
 
-			if (countdown.time.asSeconds() <= 0)
+			if (countdown.time <= sf::Time::Zero)
 			{
 				registry.destroy(entity);
 				createFruitSpawner();
 			}
 		}
+	}
+}
 
-		if(!registry.valid(entity)) continue;
+void updateCollisions()
+{
+	// check against snake
+	auto snakeView = registry.view<Snake>();
+	for (auto snakeEntity : snakeView)
+	{
+		auto& snake = snakeView.get(snakeEntity);
+		const auto headPosition = snake.segments.at(0).currentPosition();
 
-		// check against snake
-		auto snakeView = registry.view<Snake>();
-		for (auto snakeEntity : snakeView)
+		auto fruitView = registry.view<Fruit, Position, Score>();
+		for (auto fruitEntity : fruitView)
 		{
-			auto& snake = snakeView.get(snakeEntity);
-			const auto headPosition = snake.segments.at(0).currentPosition();
-			if (headPosition == position)
+			const auto& [fruit, fruitPosition, fruitScore] = fruitView.get<Fruit, Position, Score>(fruitEntity);
+			if (headPosition == fruitPosition)
 			{
-				score += view.get<Score>(entity).amount;
+				score += fruitScore.amount;
 				
 				if (fruit.type == FruitType::Regular)
 				{
 					++snake.extensionsLeft;
 					createFruit(FruitType::Regular);
-				} else
+				}
+				else
 				{
-					snake.extensionsLeft += 2;
+					snake.extensionsLeft += 3;
 					createFruitSpawner();
 				}
 
-				registry.destroy(entity);
+				registry.destroy(fruitEntity);
 			}
 		}
 	}
@@ -399,8 +406,6 @@ int main()
 		renderState.blendMode = sf::BlendAlpha;
 		renderState.texture = &texture;
 	}
-
-	
 	openSansFont.loadFromFile("OpenSansBold.ttf");
 
 	sf::Text wonText;
@@ -488,8 +493,9 @@ int main()
 		elapsed = clock.restart();
 		if (gameState == GameState::Running)
 		{
-			updateFruits(elapsed);
 			updateSnake(elapsed);
+			updateFruits(elapsed);
+			updateCollisions();
 			updateFruitSpawners(elapsed);
 		}
 
