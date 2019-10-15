@@ -176,6 +176,9 @@
       <DeploymentContent>false</DeploymentContent>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="moveinterval.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
