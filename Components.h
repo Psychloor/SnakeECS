@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SNAKE_COMPONENTS_H
+#define SNAKE_COMPONENTS_H
 
 #include <vector>
 #include <SFML/System/Time.hpp>
@@ -87,3 +88,4 @@ struct Time
 {
 	sf::Time time = sf::Time::Zero;
 };
+#endif // SNAKE_COMPONENTS_H
