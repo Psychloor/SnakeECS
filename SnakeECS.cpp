@@ -273,7 +273,7 @@ void updateFruitSpawners(const sf::Time& dt)
 
 void updateFruits(const sf::Time& dt)
 {
-	auto view = registry.view<Fruit, Time, Score>();
+	auto view = registry.view<Fruit, Time>();
 
 	for (auto entity : view)
 	{
